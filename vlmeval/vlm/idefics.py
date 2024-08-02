@@ -364,13 +364,13 @@ class IDEFICS2Large(BaseModel):
         if width >= height:
             width = res_image_side
             height = int(width / aspect_ratio)
-            if height % 2 != 0:
-                height += 1
+            #if height % 2 != 0:
+            #    height += 1
         elif height > width:
             height = res_image_side
             width = int(height * aspect_ratio)
-            if width % 2 != 0:
-                width += 1
+            #if width % 2 != 0:
+            #    width += 1
 
         image = image.resize((width, height), Image.LANCZOS)
         return image
@@ -682,8 +682,48 @@ class IDEFICS2Large(BaseModel):
             eval=True,
             vision_encoder_type=VisionEncoderTypes.siglip,
         )
-        pixel_values = [torch.stack([image_transform(img) for img in formatted_images])]
-        pixel_values = torch.stack(pixel_values).to(self.model.device)
+        #pixel_values = [torch.stack([image_transform(img) for img in formatted_images])]
+        #pixel_values = torch.stack(pixel_values).to(self.model.device)
+
+        # Start modification for the padded images
+
+        pixel_values = []
+        pixel_attention_masks = []
+
+        pv = [image_transform(img) for img in formatted_images]
+
+        num_images = len(pv)
+        max_height = max([im.size(1) for im in pv])
+        max_width = max([im.size(2) for im in pv])
+        padded_image_tensor = torch.zeros(num_images, 3, max_height, max_width)
+        padded_pixel_attention_masks = torch.zeros(num_images, max_height, max_width, dtype=torch.bool)
+
+        for idx, im in enumerate(pv):
+            im_height, im_width = im.size(1), im.size(2)
+            padded_image_tensor[idx, :, :im_height, :im_width] = im
+            padded_pixel_attention_masks[idx, :im_height, :im_width] = True
+
+        pixel_values.append(padded_image_tensor)
+        pixel_attention_masks.append(padded_pixel_attention_masks)
+
+        total_batch_size = len(pixel_values)
+        max_num_images = max([i.size(0) for i in pixel_values])
+        max_height = max([i.size(2) for i in pixel_values])
+        max_width = max([i.size(3) for i in pixel_values])
+        pixel_values = torch.zeros(total_batch_size, max_num_images, 3, max_height, max_width)
+        pixel_attention_mask = torch.zeros(total_batch_size, max_num_images, max_height, max_width, dtype=torch.bool)
+        for idx, (sample_images, sample_pixel_attention_mask) in enumerate(
+            zip(pixel_values, pixel_attention_mask)
+        ):
+            im_batch_height, im_batch_width = sample_images.size()[2:]
+            pixel_values[idx, : sample_images.shape[0], :, :im_batch_height, :im_batch_width] = sample_images
+            pixel_attention_mask[idx, : sample_pixel_attention_mask.shape[0], :im_batch_height, :im_batch_width] = (
+                sample_pixel_attention_mask
+            )
+        pixel_values = pixel_values.to(self.model.device)
+        pixel_attention_mask = pixel_attention_mask.to(self.model.device)
+
+        # End modification for the padded images
 
         tokens = self.tokenizer(
             [formatted_messages],
@@ -699,6 +739,7 @@ class IDEFICS2Large(BaseModel):
             input_ids=input_ids,
             attention_mask=attention_mask,
             pixel_values=pixel_values,
+            pixel_attention_mask=pixel_attention_mask,
             num_beams=1,
             max_new_tokens=512,
             bad_words_ids=self.tokenizer(["<image>", "<fake_token_around_image>"], add_special_tokens=False)["input_ids"],
