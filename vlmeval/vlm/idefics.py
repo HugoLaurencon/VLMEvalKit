@@ -364,13 +364,13 @@ class IDEFICS2Large(BaseModel):
         if width >= height:
             width = res_image_side
             height = int(width / aspect_ratio)
-            #if height % 2 != 0:
-            #    height += 1
+            if height % 2 != 0:
+                height += 1
         elif height > width:
             height = res_image_side
             width = int(height * aspect_ratio)
-            #if width % 2 != 0:
-            #    width += 1
+            if width % 2 != 0:
+                width += 1
 
         image = image.resize((width, height), Image.LANCZOS)
         return image
@@ -682,9 +682,12 @@ class IDEFICS2Large(BaseModel):
             eval=True,
             vision_encoder_type=VisionEncoderTypes.siglip,
         )
-        #pixel_values = [torch.stack([image_transform(img) for img in formatted_images])]
-        #pixel_values = torch.stack(pixel_values).to(self.model.device)
+        if len(formatted_images) > 1:
+            formatted_images[-1] = formatted_images[-1].resize(formatted_images[0].size, Image.LANCZOS)
+        pixel_values = [torch.stack([image_transform(img) for img in formatted_images])]
+        pixel_values = torch.stack(pixel_values).to(self.model.device)
 
+        """
         # Start modification for the padded images
 
         pixel_values = []
@@ -724,6 +727,7 @@ class IDEFICS2Large(BaseModel):
         pixel_attention_mask = pixel_attention_mask.to(self.model.device)
 
         # End modification for the padded images
+        """
 
         tokens = self.tokenizer(
             [formatted_messages],
@@ -739,7 +743,7 @@ class IDEFICS2Large(BaseModel):
             input_ids=input_ids,
             attention_mask=attention_mask,
             pixel_values=pixel_values,
-            pixel_attention_mask=pixel_attention_mask,
+            #pixel_attention_mask=pixel_attention_mask,
             num_beams=1,
             max_new_tokens=512,
             bad_words_ids=self.tokenizer(["<image>", "<fake_token_around_image>"], add_special_tokens=False)["input_ids"],
