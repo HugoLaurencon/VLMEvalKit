@@ -364,9 +364,13 @@ class IDEFICS2Large(BaseModel):
         if width >= height:
             width = res_image_side
             height = int(width / aspect_ratio)
+            if height % 2 != 0:
+                height += 1
         elif height > width:
             height = res_image_side
             width = int(height * aspect_ratio)
+            if width % 2 != 0:
+                width += 1
 
         image = image.resize((width, height), Image.LANCZOS)
         return image
