@@ -682,6 +682,9 @@ class IDEFICS2Large(BaseModel):
             eval=True,
             vision_encoder_type=VisionEncoderTypes.siglip,
         )
+        if len(formatted_images) > 5:
+            for idx in range(len(formatted_images)):
+                formatted_images[idx] = formatted_images[idx].resize((980, 980), Image.LANCZOS)
         if len(formatted_images) > 1:
             formatted_images[-1] = formatted_images[-1].resize(formatted_images[0].size, Image.LANCZOS)
         pixel_values = [torch.stack([image_transform(img) for img in formatted_images])]
