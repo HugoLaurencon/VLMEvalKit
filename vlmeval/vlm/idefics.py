@@ -300,13 +300,13 @@ class IDEFICS2(BaseModel):
         response = generated_text.strip()
         # print(dataset, " | ", formatted_messages.replace("\n", "\\n"), " | ", response.replace("\n", "\\n"))
         return response
-    
 
-class IDEFICS3(BaseModel):
+
+class IDEFICS2Large(BaseModel):
     INSTALL_REQ = True
     INTERLEAVE = True
 
-    def __init__(self, model_path='HuggingFaceM4/idefics2-8b', **kwargs):
+    def __init__(self, model_path='HuggingFaceM4/idefics2-70b', **kwargs):
         assert model_path is not None
         self.model_path = model_path
 
@@ -320,11 +320,11 @@ class IDEFICS3(BaseModel):
 
         def load_model_and_tokenizer(path_model):
             # Load tokenizer
-            path_tokenizer = os.path.join(path_model, "tokenizer")
+            path_tokenizer = path_model  # os.path.join(path_model, "tokenizer")
             tokenizer = AutoTokenizer.from_pretrained(path_tokenizer, truncation_side="left", use_fast=True)
             tokenizer.padding_side = "left"
             # Load model
-            path_unwrapped_model = os.path.join(path_model, "unwrapped_model")
+            path_unwrapped_model = path_model  # os.path.join(path_model, "unwrapped_model")
             # model = VLlama3ForCausalLM.from_pretrained(path_unwrapped_model, torch_dtype=torch.bfloat16, device_map="auto")  # DEBUG
             model = VLlama3ForCausalLM.from_pretrained(path_unwrapped_model, torch_dtype=torch.bfloat16)
             model.to("cuda:0")  # DEBUG
@@ -332,8 +332,22 @@ class IDEFICS3(BaseModel):
             model.eval()
             return tokenizer, model
         
-        PATH_MODEL = "/fsx/m4/experiments/local_experiment_dir/s3_async_temporary_checkpoint_folder/tr_309_308_ft_400/"
-        self.tokenizer, self.model = load_model_and_tokenizer(path_model=PATH_MODEL)
+        def load_model_and_tokenizer_2(path_model):
+            # Load tokenizer
+            path_tokenizer = path_model  # os.path.join(path_model, "tokenizer")
+            tokenizer = AutoTokenizer.from_pretrained(path_tokenizer, truncation_side="left", use_fast=True)
+            tokenizer.padding_side = "left"
+            # Load model
+            path_unwrapped_model = path_model  # os.path.join(path_model, "unwrapped_model")
+            model = VLlama3ForCausalLM.from_pretrained(path_unwrapped_model, torch_dtype=torch.bfloat16, device_map="auto")  # DEBUG
+            #model = VLlama3ForCausalLM.from_pretrained(path_unwrapped_model, torch_dtype=torch.bfloat16)
+            #model.to("cuda:0")  # DEBUG
+            # Eval mode
+            model.eval()
+            return tokenizer, model
+
+        PATH_MODEL = "/fsx/hugo/Idefics3-Llama3-70B/"
+        self.tokenizer, self.model = load_model_and_tokenizer_2(path_model=PATH_MODEL)
 
         kwargs_default = {'max_new_tokens': 512}
         kwargs_default.update(kwargs)
@@ -342,7 +356,7 @@ class IDEFICS3(BaseModel):
             f'Following kwargs received: {self.kwargs}, will use as generation config. '
         )
         torch.cuda.empty_cache()
-    
+
     def upscale_image(self, image, res_image_side):
         width, height = image.size
         aspect_ratio = width / height
@@ -350,11 +364,13 @@ class IDEFICS3(BaseModel):
         if width >= height:
             width = res_image_side
             height = int(width / aspect_ratio)
-            height = math.ceil(height / 364) * 364
+            if height % 2 != 0:
+                height += 1
         elif height > width:
             height = res_image_side
             width = int(height * aspect_ratio)
-            width = math.ceil(width / 364) * 364
+            if width % 2 != 0:
+                width += 1
 
         image = image.resize((width, height), Image.LANCZOS)
         return image
@@ -371,14 +387,14 @@ class IDEFICS3(BaseModel):
         for msg in message:
             if msg['type'] == 'image':
                 img = load_image(msg['value'])
-                img = self.upscale_image(image=img, res_image_side=4*364)
+                img = self.upscale_image(image=img, res_image_side=1960)
                 splitted_images_array, text_splitted_images = get_splitted_images_and_corresponding_text(
                     image=img,
-                    vision_encoder_max_image_size=364,
-                    max_image_size=5*364,
+                    vision_encoder_max_image_size=980,
+                    max_image_size=1960,
                     pre_split_scale_up_max=None,
                     pre_split_scale_up_frequency=None,
-                    image_seq_len=169,
+                    image_seq_len=256,
                 )
                 images.extend(splitted_images_array)
                 prompt += text_splitted_images
@@ -403,14 +419,14 @@ class IDEFICS3(BaseModel):
         for msg in message:
             if msg['type'] == 'image':
                 img = load_image(msg['value'])
-                img = self.upscale_image(image=img, res_image_side=4*364)
+                img = self.upscale_image(image=img, res_image_side=1960)
                 splitted_images_array, text_splitted_images = get_splitted_images_and_corresponding_text(
                     image=img,
-                    vision_encoder_max_image_size=364,
-                    max_image_size=5*364,
+                    vision_encoder_max_image_size=980,
+                    max_image_size=1960,
                     pre_split_scale_up_max=None,
                     pre_split_scale_up_frequency=None,
-                    image_seq_len=169,
+                    image_seq_len=256,
                 )
                 images.extend(splitted_images_array)
                 prompt += text_splitted_images
@@ -434,14 +450,14 @@ class IDEFICS3(BaseModel):
             for item in msg['content']:
                 if item['type'] == 'image':
                     img = load_image(item['value'])
-                    img = self.upscale_image(image=img, res_image_side=4*364)
+                    img = self.upscale_image(image=img, res_image_side=1960)
                     splitted_images_array, text_splitted_images = get_splitted_images_and_corresponding_text(
                         image=img,
-                        vision_encoder_max_image_size=364,
-                        max_image_size=5*364,
+                        vision_encoder_max_image_size=980,
+                        max_image_size=1960,
                         pre_split_scale_up_max=None,
                         pre_split_scale_up_frequency=None,
-                        image_seq_len=169,
+                        image_seq_len=256,
                     )
                     images.extend(splitted_images_array)
                     prompt += text_splitted_images
@@ -462,14 +478,14 @@ class IDEFICS3(BaseModel):
         for msg in message:
             if msg['type'] == 'image':
                 img = load_image(msg['value'])
-                img = self.upscale_image(image=img, res_image_side=4*364)
+                img = self.upscale_image(image=img, res_image_side=1960)
                 splitted_images_array, text_splitted_images = get_splitted_images_and_corresponding_text(
                     image=img,
-                    vision_encoder_max_image_size=364,
-                    max_image_size=5*364,
+                    vision_encoder_max_image_size=980,
+                    max_image_size=1960,
                     pre_split_scale_up_max=None,
                     pre_split_scale_up_frequency=None,
-                    image_seq_len=169,
+                    image_seq_len=256,
                 )
                 images.extend(splitted_images_array)
                 prompt += text_splitted_images
@@ -501,14 +517,14 @@ class IDEFICS3(BaseModel):
         for msg in message:
             if msg['type'] == 'image':
                 img = load_image(msg['value'])
-                img = self.upscale_image(image=img, res_image_side=4*364)
+                img = self.upscale_image(image=img, res_image_side=1960)
                 splitted_images_array, text_splitted_images = get_splitted_images_and_corresponding_text(
                     image=img,
-                    vision_encoder_max_image_size=364,
-                    max_image_size=5*364,
+                    vision_encoder_max_image_size=980,
+                    max_image_size=1960,
                     pre_split_scale_up_max=None,
                     pre_split_scale_up_frequency=None,
-                    image_seq_len=169,
+                    image_seq_len=256,
                 )
                 images.extend(splitted_images_array)
                 prompt += f'<image {img_counter}>:{text_splitted_images}\n'
@@ -526,7 +542,7 @@ class IDEFICS3(BaseModel):
                 for k, v in replace_mapping.items():
                     instruction = instruction.replace(k, v)
                 prompt += instruction.strip()
-        
+
         # CoT
         #prompt = prompt.replace("Answer with the letter.", "").strip()
         #if 'A.' in prompt and 'B.' in prompt:
@@ -537,7 +553,7 @@ class IDEFICS3(BaseModel):
         prompt += '<end_of_utterance>\nAssistant:'
         if 'A.' in prompt and 'B.' in prompt:
             prompt += ' Answer:'
-        
+
         return prompt, images
 
     def build_prompt_mathvista(self, message):
@@ -558,14 +574,14 @@ class IDEFICS3(BaseModel):
         for msg in message:
             if msg['type'] == 'image':
                 img = load_image(msg['value'])
-                img = self.upscale_image(image=img, res_image_side=4*364)
+                img = self.upscale_image(image=img, res_image_side=1960)
                 splitted_images_array, text_splitted_images = get_splitted_images_and_corresponding_text(
                     image=img,
-                    vision_encoder_max_image_size=364,
-                    max_image_size=5*364,
+                    vision_encoder_max_image_size=980,
+                    max_image_size=1960,
                     pre_split_scale_up_max=None,
                     pre_split_scale_up_frequency=None,
-                    image_seq_len=169,
+                    image_seq_len=256,
                 )
                 images.extend(splitted_images_array)
                 prompt += text_splitted_images
@@ -661,13 +677,60 @@ class IDEFICS3(BaseModel):
         formatted_messages = "<|begin_of_text|>" + formatted_messages
 
         image_transform = build_image_transform(
-            max_image_size=364,
+            max_image_size=980,
             image_size=None,
             eval=True,
             vision_encoder_type=VisionEncoderTypes.siglip,
         )
+        if len(formatted_images) > 5:
+            for idx in range(len(formatted_images)):
+                formatted_images[idx] = formatted_images[idx].resize((980, 980), Image.LANCZOS)
+        if len(formatted_images) > 1:
+            formatted_images[-1] = formatted_images[-1].resize(formatted_images[0].size, Image.LANCZOS)
         pixel_values = [torch.stack([image_transform(img) for img in formatted_images])]
         pixel_values = torch.stack(pixel_values).to(self.model.device)
+
+        """
+        # Start modification for the padded images
+
+        pixel_values = []
+        pixel_attention_masks = []
+
+        pv = [image_transform(img) for img in formatted_images]
+
+        num_images = len(pv)
+        max_height = max([im.size(1) for im in pv])
+        max_width = max([im.size(2) for im in pv])
+        padded_image_tensor = torch.zeros(num_images, 3, max_height, max_width)
+        padded_pixel_attention_masks = torch.zeros(num_images, max_height, max_width, dtype=torch.bool)
+
+        for idx, im in enumerate(pv):
+            im_height, im_width = im.size(1), im.size(2)
+            padded_image_tensor[idx, :, :im_height, :im_width] = im
+            padded_pixel_attention_masks[idx, :im_height, :im_width] = True
+
+        pixel_values.append(padded_image_tensor)
+        pixel_attention_masks.append(padded_pixel_attention_masks)
+
+        total_batch_size = len(pixel_values)
+        max_num_images = max([i.size(0) for i in pixel_values])
+        max_height = max([i.size(2) for i in pixel_values])
+        max_width = max([i.size(3) for i in pixel_values])
+        pixel_values = torch.zeros(total_batch_size, max_num_images, 3, max_height, max_width)
+        pixel_attention_mask = torch.zeros(total_batch_size, max_num_images, max_height, max_width, dtype=torch.bool)
+        for idx, (sample_images, sample_pixel_attention_mask) in enumerate(
+            zip(pixel_values, pixel_attention_mask)
+        ):
+            im_batch_height, im_batch_width = sample_images.size()[2:]
+            pixel_values[idx, : sample_images.shape[0], :, :im_batch_height, :im_batch_width] = sample_images
+            pixel_attention_mask[idx, : sample_pixel_attention_mask.shape[0], :im_batch_height, :im_batch_width] = (
+                sample_pixel_attention_mask
+            )
+        pixel_values = pixel_values.to(self.model.device)
+        pixel_attention_mask = pixel_attention_mask.to(self.model.device)
+
+        # End modification for the padded images
+        """
 
         tokens = self.tokenizer(
             [formatted_messages],
@@ -683,6 +746,7 @@ class IDEFICS3(BaseModel):
             input_ids=input_ids,
             attention_mask=attention_mask,
             pixel_values=pixel_values,
+            #pixel_attention_mask=pixel_attention_mask,
             num_beams=1,
             max_new_tokens=512,
             bad_words_ids=self.tokenizer(["<image>", "<fake_token_around_image>"], add_special_tokens=False)["input_ids"],
