@@ -154,7 +154,6 @@ idefics_series = {
     'idefics2_8b': partial(IDEFICS2, model_path='HuggingFaceM4/idefics2-8b'),
     'idefics2_70b': partial(IDEFICS2Large, model_path='HuggingFaceM4/idefics2-70b'),
     'idefics2_70b_980': partial(IDEFICS2Large980, model_path='HuggingFaceM4/idefics2-70b'),
-    'idefics2_70b_1960_980': partial(IDEFICS2Large1960980, model_path='HuggingFaceM4/idefics2-70b'),
 }
 
 instructblip_series = {
