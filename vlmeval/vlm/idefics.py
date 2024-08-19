@@ -588,6 +588,11 @@ class IDEFICS3(BaseModel):
         #    prompt += '\Think step by step and explain your reasoning. Then, answer with the requested format."<end_of_utterance>\nAssistant: Let\'s think step by step.'
 
 
+        # WARNING. This was not present in the original code. Maybe remove.
+        if 'A.' in prompt and 'B.' in prompt:
+            prompt += "\nAnswer with the letter."
+
+
         prompt += '<end_of_utterance>\nAssistant:'
         if 'A.' in prompt and 'B.' in prompt:
             prompt += ' Answer:'
