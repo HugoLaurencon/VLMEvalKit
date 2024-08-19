@@ -153,6 +153,7 @@ idefics_series = {
     'idefics_80b_instruct': partial(IDEFICS, model_path='HuggingFaceM4/idefics-80b-instruct'),
     'idefics2_8b': partial(IDEFICS2, model_path='HuggingFaceM4/idefics2-8b'),
     'idefics3_8b': partial(IDEFICS3, model_path='HuggingFaceM4/idefics3-8b'),
+    'idefics3_8b_2': partial(IDEFICS3, model_path='HuggingFaceM4/idefics3-8b'),
 }
 
 instructblip_series = {
