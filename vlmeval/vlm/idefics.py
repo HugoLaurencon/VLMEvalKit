@@ -1143,7 +1143,7 @@ class IDEFICS2Large980(BaseModel):
             eval=True,
             vision_encoder_type=VisionEncoderTypes.siglip,
         )
-        if len(formatted_images) > 5:
+        if len(formatted_images) > 2:
             for idx in range(len(formatted_images)):
                 formatted_images[idx] = formatted_images[idx].resize((980, 980), Image.LANCZOS)
         if len(formatted_images) > 1:
