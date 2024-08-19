@@ -334,11 +334,11 @@ class IDEFICS2Large(BaseModel):
         
         def load_model_and_tokenizer_2(path_model):
             # Load tokenizer
-            path_tokenizer = path_model  # os.path.join(path_model, "tokenizer")
+            path_tokenizer = os.path.join(path_model, "tokenizer")
             tokenizer = AutoTokenizer.from_pretrained(path_tokenizer, truncation_side="left", use_fast=True)
             tokenizer.padding_side = "left"
             # Load model
-            path_unwrapped_model = path_model  # os.path.join(path_model, "unwrapped_model")
+            path_unwrapped_model = os.path.join(path_model, "unwrapped_model")
             model = VLlama3ForCausalLM.from_pretrained(path_unwrapped_model, torch_dtype=torch.bfloat16, device_map="auto")  # DEBUG
             #model = VLlama3ForCausalLM.from_pretrained(path_unwrapped_model, torch_dtype=torch.bfloat16)
             #model.to("cuda:0")  # DEBUG
@@ -346,7 +346,7 @@ class IDEFICS2Large(BaseModel):
             model.eval()
             return tokenizer, model
 
-        PATH_MODEL = "/fsx/hugo/Idefics3-Llama3-70B/"
+        PATH_MODEL = "/fsx/m4/experiments/local_experiment_dir/s3_async_temporary_checkpoint_folder/tr_311_restart1_310_ft_80/"
         self.tokenizer, self.model = load_model_and_tokenizer_2(path_model=PATH_MODEL)
 
         kwargs_default = {'max_new_tokens': 512}
